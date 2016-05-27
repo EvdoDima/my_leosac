@@ -1,0 +1,12 @@
+[Unit]
+Description=Leosac daemon
+Documentation=http://www.github.com/islog/leosac/wiki
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/leosac -f /etc/leosac.d/core.xml -g /etc/leosac.d/hw.xml
+WorkingDirectory=/etc/leosac.d
+
+[Install]
+WantedBy=default.target

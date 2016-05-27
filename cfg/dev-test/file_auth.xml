@@ -1,0 +1,58 @@
+<root>
+    <users>
+        <user>
+            <name>MY_USER</name>
+        </user>
+    </users>
+
+    <!--
+    Maps WiegandCard to user
+    -->
+    <credentials>
+        <map>
+            <user>MY_USER</user>
+            <WiegandCard>
+                <card_id>80:83:a0:40</card_id>
+                <bits>32</bits>
+            </WiegandCard>
+        </map>
+        <map>
+            <user>MY_USER</user>
+            <PINCode>
+                <pin>1234</pin>
+            </PINCode>
+        </map>
+    </credentials>
+
+    <schedules>
+        <schedule>
+            <name>all</name>
+            <!-- Has full access on monday and sunday -->
+            <monday>
+                <start>00:00</start>
+                <end>23:59</end>
+            </monday>
+            <tuesday>
+                <start>00:00</start>
+                <end>23:59</end>
+            </tuesday>
+            <wednesday>
+                <start>00:00</start>
+                <end>23:59</end>
+            </wednesday>
+
+            <sunday>
+                <start>00:00</start>
+                <end>23:59</end>
+            </sunday>
+        </schedule>
+    </schedules>
+
+    <schedules_mapping>
+        <map>
+            <schedule>all</schedule>
+            <user>MY_USER</user>
+        </map>
+    </schedules_mapping>
+
+</root>

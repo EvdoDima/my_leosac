@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<kernel>
+  <instance_name>fixe</instance_name>
+  <plugin_directories>
+        <plugindir>.</plugindir>
+    </plugin_directories>
+
+    <log>
+        <enable_syslog>true</enable_syslog>
+        <min_syslog>INFO</min_syslog>
+    </log>
+
+    <network>
+        <enabled>false</enabled>
+    </network>
+
+    <remote>
+        <port>12345</port>
+        <secret_key>Ygk2EVo#hr*uTG=U[jFFWrb9HDW-V?388=kj)AUz</secret_key>
+        <public_key>TJz$:^DbZvFN@wv/ct&[Su6Nnu6w!fMGHEcIttyT</public_key>
+    </remote>
+
+    <no_import>
+        <TEST_AND_RESET />
+        <LED_BUZZER />
+        <PIFACEDIGITAL_GPIO />
+    </no_import>
+
+    <modules>
+
+        <module>
+            <name>REPLICATION</name>
+            <file>libreplication.so</file>
+            <level>11</level>
+            <module_config>
+                <delay>42</delay>
+                <endpoint>qqeq</endpoint>
+                <pubkey>TJz$:^DbZvFN@wv/ct&[Su6Nnu6w!fMGHEcIttyT</pubkey>
+            </module_config>
+        </module>
+
+
+        <module>
+            <name>STDIN_CONTROLLER</name>
+            <file>libstdin-controller.so</file>
+            <level>40</level>
+
+        </module>
+        <module>
+            <name>WIEGAND_READER</name>
+            <file>libwiegand.so</file>
+            <level>5</level>
+            <module_config>
+                <readers>
+                    <reader>
+                        <name>MY_WIEGAND_1</name>
+                        <high>wiegand_data_high</high>
+                        <low>wiegand_data_low</low>
+                        <green_led></green_led>
+                        <buzzer></buzzer>
+                    </reader>
+                </readers>
+            </module_config>
+        </module>
+
+        <module>
+            <name>INSTRUMENTATION</name>
+            <file>libinstrumentation.so</file>
+            <level>105</level>
+            <module_config>
+                <ipc_endpoint>/tmp/leosac-ipc</ipc_endpoint>
+            </module_config>
+        </module>
+
+        <module>
+            <name>MONITOR</name>
+            <file>libmonitor.so</file>
+            <level>1</level>
+
+            <module_config>
+                <file-bus>MY_LOGS.txt</file-bus>
+                <verbose>false</verbose>
+                <!--                <ping>
+                                    <ip>8.8.8.8</ip>
+                                    <led>dummy</led>
+                                </ping>-->
+            </module_config>
+        </module>
+<!--
+        <module>
+            <name>TEST_AND_RESET</name>
+            <file>libtest-and-reset.so</file>
+            <level>101</level>
+            <module_config>
+                <devices>
+                    <device>
+                        <name>MY_WIEGAND_1</name>
+                        <reset_card>40:a0:83:80</reset_card>
+                    </device>
+                </devices>
+            </module_config>
+        </module>-->
+    </modules>
+</kernel>
