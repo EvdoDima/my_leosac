@@ -26,7 +26,6 @@
 #include <boost/algorithm/string/join.hpp>
 #include "WebAuthInstance.hpp"
 #include "tools/log.hpp"
-#include "WebAuthSourceMapper.hpp"
 
 using namespace Leosac::Module::Auth;
 using namespace Leosac::Auth;
@@ -35,14 +34,15 @@ WebAuthInstance::WebAuthInstance(zmqpp::context &ctx,
         std::string const &auth_ctx_name,
         const std::list<std::string> &auth_sources_names,
         std::string const &auth_target_name,
-        std::string const &input_file,
+        std::string const serverURL,
+        std::string const security,
         CoreUtilsPtr core_utils) :
-        mapper_(std::make_shared<WebAuthSourceMapper>(input_file)),
         bus_push_(ctx, zmqpp::socket_type::push),
         bus_sub_(ctx, zmqpp::socket_type::sub),
         name_(auth_ctx_name),
         target_name_(auth_target_name),
-        file_path_(input_file),
+        serverURL(serverURL),
+        security(security),
         core_utils_(core_utils)
 {
     bus_push_.connect("inproc://zmq-bus-pull");
@@ -88,86 +88,76 @@ zmqpp::socket &WebAuthInstance::bus_sub()
     return bus_sub_;
 }
 
+size_t write_callback(char *ptr, size_t size, size_t nmemb, char **userdata) {
+    *userdata = ptr;
+    return (size_t) size * nmemb;
+}
+
+bool sendrequest(std::string sourcename, std::string pin, std::string cardId) {
+    CURL *curl;
+    CURLcode res;
+
+    curl_global_init(CURL_GLOBAL_SSL);
+
+    curl = curl_easy_init();
+
+
+    if (curl) {
+
+        char *result;
+
+        std::string request("sourcename=");
+        request=request.append(sourcename)
+                .append("&pin=").append(pin)
+                .append("&security=").append(security);
+
+        if(cardId!=""){
+            request.append("&cardId").append(cardId);
+        }
+
+        cout <<request << endl;
+
+
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS,request.c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, serverURL.c_str());
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
+
+
+
+
+        /* Perform the request, res will get the return code */
+        res = curl_easy_perform(curl);
+        cout << result<<endl;
+
+        /* Check for errors */
+        if (res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                    curl_easy_strerror(res));
+
+        /* always cleanup */
+        curl_easy_cleanup(curl);
+        return std::string(result)==sourcename.append("_Granted");
+    }
+
+    curl_global_cleanup();
+}
+
 bool WebAuthInstance::handle_auth(zmqpp::message *msg) noexcept
 {
-    try
-    {
-//        std::lock_guard<std::mutex> guard(mutex_);
-//
-//        AuthSourceBuilder build;
-//        IAuthenticationSourcePtr ptr = build.create(msg);
-//        DEBUG("Auth source OK... will map");
-//        mapper_->mapToUser(ptr);
-//        DEBUG("Mapping done");
-//        assert(ptr);
-//        INFO("Using AuthSource: " << ptr->to_string());
-//        auto profile = mapper_->buildProfile(ptr);
-//        if (!profile)
-//        {
-//            NOTICE("No profile was created from this auth source message.");
-//            return false;
-//        }
-//        if (target_name_.empty())
-//        {
-//            // check against default target
-//            return profile->isAccessGranted(std::chrono::system_clock::now(), nullptr);
-//        }
-//        else
-//        {
-//            AuthTargetPtr t(new AuthTarget(target_name_));
-//            return profile->isAccessGranted(std::chrono::system_clock::now(), t);
-//        }
-    }
-    catch (std::exception &e)
-    {
-        log_exception(e);
-    }
-    return false;
-}
+    std::string sourcename;
+    std::string pin;
+    std::string cardId;
 
-std::string WebAuthInstance::auth_file_content() const
-{
-    std::ifstream t(file_path_);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
+    sourcename << msg;
+    pin << msg;
+    cardId << msg;
 
-    return buffer.str();
-}
+    return sendrequest(sourcename,pin,cardId);
 
-const std::string &WebAuthInstance::auth_file_name() const
-{
-    return file_path_;
-}
-
-void WebAuthInstance::reload_auth_config()
-{
-    // The idea is to build a new mapper in an other thread
-    // and swap it with the current mapper once it is built.
-    // This is because building a new mapper can take a while.
-
-    // We keep a shared_ptr to "this" in order to avoid dangling pointer to
-    // a non-existent instance (for example if the module was shutdown between
-    // the scheduling of the task and its execution).
-    auto self = shared_from_this();
-    auto file_path = file_path_;
-    auto task = Tasks::GenericTask::build([self, file_path] () {
-        try
-        {
-            auto mapper = std::make_shared<WebAuthSourceMapper>(file_path);
-            {
-                std::lock_guard<std::mutex> guard(self->mutex_);
-                self->mapper_ = mapper;
-                INFO("WebAuthInstance config reloaded.");
-            }
-            return true;
-        }
-        catch (const std::exception &e)
-        {
-            WARN("Problem when reloading WebAuthInstance configuration: " << e.what());
-            return false;
-        }
-    });
-    core_utils_->scheduler().enqueue(task, TargetThread::POOL);
 }
 
 bool WebAuthInstance::handle_kernel_message(const zmqpp::message &msg)
